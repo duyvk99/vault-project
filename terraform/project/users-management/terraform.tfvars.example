@@ -1,0 +1,8 @@
+teams_map_users = {
+  "devops"  = ["devops"],
+  "qc"      = ["qc"],
+  "backend" = ["backend"],
+}
+
+address = "https://vault.dtsdemo.com/"
+token   = ""

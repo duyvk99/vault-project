@@ -1,0 +1,8 @@
+address                = "https://vault.dtsdemo.com"
+token                  = ""
+project                = "demo-project"
+environment            = "uat"
+path_exists            = "secret"
+enable_jwt_auth        = true
+enable_kubernetes_auth = false
+auth_jwt_exists        = "jwt-uat"
