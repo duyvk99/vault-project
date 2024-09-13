@@ -1,3 +1,5 @@
+!terraform/projects/secrets-management/demo-project/
+
 tls/*.pem
 tls/*.csr
 *.env
@@ -17,4 +19,3 @@ terraform.rc
 *.terraform.lock*
 backend.tf
 
-!**terraform/project/secrets-management/demo-project/
