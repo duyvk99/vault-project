@@ -1,8 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: vault-ui
-  namespace: vault
+  name: vault-central-ui
+  namespace: vault-central
   annotations:
     nginx.ingress.kubernetes.io/ssl-passthrough: "true"
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
@@ -10,13 +10,13 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: vault.dtsdemo.com
+    - host: vault-central.dtsdemo.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: vault-ui
+                name: vault-central-ui
                 port:
                   number: 8200

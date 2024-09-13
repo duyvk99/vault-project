@@ -31,11 +31,8 @@ server:
     path: "/v1/sys/health?standbyok=true"
     initialDelaySeconds: 60
 
-  # extraEnvironmentVars is a list of extra environment variables to set with the stateful set. These could be
-  # used to include variables required for auto-unseal.
   extraEnvironmentVars:
     VAULT_CACERT: /vault/userconfig/tls-ca/tls.crt
-    VAULT_TOKEN: "<VAULT_TOKEN>"
   # extraVolumes is a list of extra volumes to mount. These will be exposed
   # to Vault in the path .
   extraVolumes:
@@ -48,36 +45,18 @@ server:
 
   extraArgs: "-config=/vault/userconfig/vault-db/config.hcl"
 
-  # This configures the Vault Statefulset to create a PVC for audit logs.
-  # See https://www.vaultproject.io/docs/audit/index.html to know more
-  # auditStorage:
-  #   enabled: true
-
   standalone:
-    enabled: false
-
-  # Run Vault in "HA" mode.
-  ha:
     enabled: true
-    replicas: 3
     config: |
-      ui = true
-       
+      disable_mlock = true
+      ui=true
+
       listener "tcp" {
         tls_disable = 0
         address     = "0.0.0.0:8200"
         tls_cert_file = "/vault/userconfig/tls-server/tls.crt"
         tls_key_file = "/vault/userconfig/tls-server/tls.key"
       }
-
-      seal "transit" {
-        address = "https://vault-central.vault-central.svc:8200"
-        disable_renewal = "false"
-        key_name = "autounseal"
-        mount_path = "transit/"
-        tls_skip_verify = "true"
-      }
-
 # Vault UI
 ui:
   enabled: true
