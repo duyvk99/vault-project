@@ -1,7 +1,7 @@
 locals {
   secrets_map_services = {
     integration_kafka = toset([
-      "demo-project-user-profile" "demo-project-notification", "demo-project-otp"
+      "demo-project-user-profile", "demo-project-notification", "demo-project-otp"
     ])
 
     integrate_redis = toset([
