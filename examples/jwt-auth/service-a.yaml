@@ -14,7 +14,7 @@ spec:
   serviceAccountName: service-a
   containers:
     - name: nginx
-      image: nginx
+      image: nginx:stable-alpine
       volumeMounts:
         - mountPath: /var/run/secrets/tokens
           name: vault-token
