@@ -46,7 +46,7 @@ server:
     - type: secret
       name: vault-db
 
-  extraArgs: "-config=/vault/userconfig/vault-db/config.hcl"
+  extraArgs: "-config=/vault/userconfig/vault-db/storage.hcl"
 
   # This configures the Vault Statefulset to create a PVC for audit logs.
   # See https://www.vaultproject.io/docs/audit/index.html to know more
