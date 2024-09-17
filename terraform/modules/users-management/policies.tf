@@ -109,8 +109,12 @@ path "${vault_mount.personal.path}/data/{{identity.entity.aliases.${vault_auth_b
 	capabilities = ["create", "update", "patch", "read", "delete", "list"]
 }
 
+path "${vault_mount.personal.path}/destroy/{{identity.entity.aliases.${vault_auth_backend.userpass.accessor}.name}}/*" {
+  capabilities = ["update", "delete"]
+}
+
 path "${vault_mount.personal.path}/metadata/{{identity.entity.aliases.${vault_auth_backend.userpass.accessor}.name}}/*" {
-	capabilities = ["read", "list"]
+	capabilities = ["create", "update", "patch", "read", "delete", "list"]
 }
 EOT
 

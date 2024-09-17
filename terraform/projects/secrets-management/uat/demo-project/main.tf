@@ -1,5 +1,5 @@
 module "secrets-manager" {
-  source             = "../../../modules/secrets-manager/"
+  source             = "../../../../modules/secrets-manager/"
   services           = local.services
   policies_map_roles = local.secrets_map_services
   project            = var.project
