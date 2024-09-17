@@ -56,16 +56,27 @@ resource "vault_identity_group" "internal" {
   for_each = toset(local.list_groups)
   name     = each.value
   type     = "internal"
-  policies = each.value == "devops" ? concat([], [
-    "${vault_policy.admin_policy.name}",
-    "${vault_policy.group_policy["${each.value}"].name}", 
-]) : concat(local.default_policies,["${vault_policy.group_policy["${each.value}"].name}"])
+
+  external_policies = true
 
   lifecycle {
     ignore_changes = [
       member_entity_ids
     ]
   }
+}
+
+resource "vault_identity_group_policies" "attach_group_policies" {
+  for_each = vault_identity_group.internal
+
+  policies = each.value.name == "devops" ? concat([], [
+    "${vault_policy.admin_policy.name}",
+    "${vault_policy.group_policy["${each.value.name}"].name}", 
+  ]) : concat(local.default_policies,["${vault_policy.group_policy["${each.value.name}"].name}"])
+
+  exclusive = false
+
+  group_id = each.value.id
 }
 
 resource "vault_identity_group_member_entity_ids" "members" {

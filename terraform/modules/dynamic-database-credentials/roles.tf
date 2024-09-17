@@ -1,6 +1,6 @@
 resource "vault_database_secret_backend_role" "role" {
   backend             = vault_mount.db.path
-  name                = "test"
+  name                = "${var.db_name}-${var.db_username}"
   db_name             = vault_database_secret_backend_connection.postgres.name
   creation_statements = [
     "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';",
@@ -10,5 +10,5 @@ resource "vault_database_secret_backend_role" "role" {
     "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";", 
     "DROP ROLE \"{{name}}\";"
   ]
-  max_ttl="60" 
+  max_ttl="${var.max_ttl}"
 }

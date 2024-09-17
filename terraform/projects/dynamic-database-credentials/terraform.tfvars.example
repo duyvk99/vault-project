@@ -1,0 +1,9 @@
+address = "https://vault.dtsdemo.com/"
+token   = ""
+
+group_name = "admin"
+
+db_host = "postgres.database"
+db_name = "db_test"
+db_username = "postgres"
+db_password = "Superpassword@123"
