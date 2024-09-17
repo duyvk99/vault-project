@@ -13,14 +13,14 @@
   - [7. Uninstall Vault](#7-uninstall-vault)
 
 # Setup - Vault Cluster
-## 1. Generate Self-signed TLS
-- Generate CA in */tmp*
-
+## 1. Generate Self-signed TLS Certificate
+-  There are many ways to initialize self-signed SSL certificate;in this article, we will use CloudflareSSL.
+- The following command creates “ca.pem” and “ca-key.pem”
 ```bash
 cfssl gencert -initca ./tls/ca-csr.json | cfssljson -bare /tmp/ca
 ```
+- The following command create self-signed certificate:
 
-- Create a self-signed certificate in */tmp*
 ```bash
 cfssl gencert \
   -ca=/tmp/ca.pem \
@@ -31,30 +31,27 @@ cfssl gencert \
   ./tls/ca-csr.json | cfssljson -bare /tmp/vault
 ```
 - Notes:
-  - Replace *vault.example.com* with real domain.
-  - Replace $KUBE_NAMESPACE with real namespace 
-
-- Put the self-signed certificate generated in the previous step to *./tls* folder in git repository.
+  - Replace `vault.example.com` to the domain you are using.
+  - Replace `$KUBE_NAMESPACE` to the namespace you are using to install Vault. 
+- Move the self-signed certificate that was created in the previous step to the `./tls` folder.
 ```bash
 mv /tmp/ca* ./tls
 mv /tmp/vault* ./tls
 ```
-
-## 2. Vault Database
-- Create a postgres database & a user.
+## 2. Vault Storage
+- There are many types of storage backends that can be used; in this article, we will use a PostgreSQL database as the storage backend for the Vault cluster.
+- Create a PostgreSQL database and user.
 ```sql
 CREATE DATABASE vault_server;
-CREATE USER vault with ENCRYPTED PASSWORD '1gCXWBFBSA6qRUi';
+CREATE USER vault with ENCRYPTED PASSWORD 'R4nd0mP4s$w0rD123';
 ALTER DATABASE vault_server OWNER TO vault;
 ```
 - Notes:
-  -  Replace **vault** with vault postgres user name. 
-  -  Replace **R4nd0mP4s$w0rD123** with vault postgres password .
-  -  Replace **vault_server** with vault postgres database name.
+  - Replace `vault` with the PostgreSQL username for Vault.
+  - Replace `R4nd0mP4s$w0rD123` with the PostgreSQL password for Vault.
+  - Replace `vault_server` with the PostgreSQL database name for Vault.
 </br>
-
-- Create tables in a database and enable high availability.
-
+- Setup Vault database table and enable high avaiability.
 ```sql
 \c vault_server;
 
@@ -76,87 +73,75 @@ CREATE TABLE vault_ha_locks (
   CONSTRAINT ha_key PRIMARY KEY (ha_key)
 );
 ```
-
-- Grant Policies.
+- Grant permissions to the user created above.
 ```sql
 GRANT ALL PRIVILEGES ON DATABASE vault_server TO vault;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO vault;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO  vault;
 ```
-
-## 3. Install Vault Server
-- Create vault server namespace.
+## 3. Install Vault Cluster
+- Create Vault kubernetes namespace.
 ```bash
-kubectl create namespace $KUBE_NAMESPACE --context $KUBE_CONTEXT
+kubectl create namespace $KUBE_NAMESPACE
 ```
-
-- Create Kubernetes secret self-signed TLS.
+- Create Kubernetes secret for self-signed TLS certificate.
 ```bash
 kubectl -n $KUBE_NAMESPACE create secret tls tls-ca \
  --cert ./tls/ca.pem  \
- --key ./tls/ca-key.pem --context $KUBE_CONTEXT
+ --key ./tls/ca-key.pem
 
 kubectl -n $KUBE_NAMESPACE create secret tls tls-server \
   --cert ./tls/vault.pem \
-  --key ./tls/vault-key.pem --context $KUBE_CONTEXT
-
+  --key ./tls/vault-key.pem
 ```
-- Create Vault Database Secrets.
+- Create Kubernetes secret for Vault database.
 ```bash
-kubectl create secret generic vault-db --from-file=config/config.hcl --namespace=$KUBE_NAMESPACE --context $KUBE_CONTEXT
+kubectl create secret generic vault-db --from-file=config/config.hcl --namespace=$KUBE_NAMESPACE
 ```
-- Notes:
-  - Replace **VAULT_DB_USERNAME** with your database username in *config/config.hcl* file.
-  - Replace **VAULT_DB_PASSWORD** with your database password in *config/config.hcl* file.
-  - Replace **VAULT_DB_ENDPOINT** with your database endpoint in *config/config.hcl* file.
-  
-##### Create Vault Cluster
 - Add helm repository.
 ```bash
 helm repo add hashicorp https://helm.releases.hashicorp.com
 ```   
-- Install/Upgrade Vault server.
+- Install/Upgrade Vault cluster.
 ```bash
-helm upgrade --install vault hashicorp/vault --namespace $KUBE_NAMESPACE -f helm-values/values.yaml --kube-context $KUBE_CONTEXT
+helm upgrade --install vault hashicorp/vault --namespace $KUBE_NAMESPACE -f helm-values/values.yaml
 ```
 - Create ingress
 ```bash
-kubectl apply -f helm-values/ingress.yaml --context $KUBE_CONTEXT
+kubectl apply -f helm-values/ingress.yaml
 ```
-
-Notes:
-- Remember to enable **--enable-ssl-passthrough** in the ingress-controller.
-
+- Notes:
+  - Replace `$KUBE_NAMESPACE` with your Vault kubernetes namespace.
+  - Ensure that `--enable-ssl-passthrough` is enabled in the ingress controller.
 ## 4. Unseal Vault
-- Init Vault Server 
+-  Initializes a Vault server.
 ```bash
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-0 -- vault operator init 
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-0 -- vault operator init 
 ```
-- **Importants: Save the output of the init vault (show one time only)** 
-- Unseal Vault Server
-Using the **3/5** key in the vault init to unseal vault server
-Remember to save the init output for unseal or generate the superadmin token with expired time
+- Notes:
+  - **Important: Save the output from the Vault initialization (it is shown only once).**
+  - Unseal the Vault Server: Use **3 out of 5** keys from the Vault initialization to unseal the server.
+  Remember to save the initialization output for unsealing or generate a superadmin token with an expiration time.
 ```bash
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-0 -- vault operator unseal <UNSEALED KEY 1>
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-0 -- vault operator unseal <UNSEALED KEY 2>
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-0 -- vault operator unseal <UNSEALED KEY 3>
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-1 -- vault operator unseal <UNSEALED KEY 4>
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-1 -- vault operator unseal <UNSEALED KEY 5>
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-1 -- vault operator unseal <UNSEALED KEY 1>
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-2 -- vault operator unseal <UNSEALED KEY 2>
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-2 -- vault operator unseal <UNSEALED KEY 3>
-kubectl exec --context $KUBE_CONTEXT --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-2 -- vault operator unseal <UNSEALED KEY 1>
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-0 -- vault operator unseal <UNSEALED KEY 1>
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-0 -- vault operator unseal <UNSEALED KEY 2>
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-0 -- vault operator unseal <UNSEALED KEY 3>
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-1 -- vault operator unseal <UNSEALED KEY 4>
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-1 -- vault operator unseal <UNSEALED KEY 5>
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-1 -- vault operator unseal <UNSEALED KEY 1>
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-2 -- vault operator unseal <UNSEALED KEY 2>
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-2 -- vault operator unseal <UNSEALED KEY 3>
+kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-2 -- vault operator unseal <UNSEALED KEY 1>
 ```
-
 ## 5. Auto Unseal with Vault Central
-### 5.1. Generate Self-Signed TLS for Vault Central
-- Generate CA in */tmp*
+### 5.1. Generate Self-signed TLS Certificate for Vault Central
+- Create “ca.pem” and “ca-key.pem”
 
 ```bash
 cfssl gencert -initca ./tls/ca-csr.json | cfssljson -bare /tmp/ca
 ```
 
-- Create a self-signed certificate in */tmp*
+- Create self-signed certificate
 ```bash
 cfssl gencert \
   -ca=/tmp/ca.pem \
@@ -167,27 +152,24 @@ cfssl gencert \
   ./tls/ca-csr.json | cfssljson -bare /tmp/vault
 ```
 - Notes:
-  - Replace **vault-central.example.com** with the real domain.
-- Put the self-signed certificate generated in the previous step to *./tls* folder in git repository.
+  - Replace `vault-central.example.com` to the domain you are using.
+- Move the self-signed certificate that was created in the previous step to the `./tls` folder.
 ```bash
 mv /tmp/ca* ./tls
 mv /tmp/vault* ./tls
 ```
-
 ### 5.2. Vault Database
-- Create a postgres database & a user.
+- Create PostgreSQL database for Vault central.
 ```sql
 CREATE DATABASE vault_central;
 ALTER DATABASE vault_central OWNER TO vault;
 ```
 - Notes:
-  -  Replace **vault_central** with vault postgres database name.
+    - Replace `vault_central` with the name of your PostgreSQL database for Vault.
 </br>
-
-- Create tables in a database.
-
+- Setup Vault database table.
 ```sql
-\c vault_server;
+\c vault_central;
 
 CREATE TABLE vault_kv_store (
   parent_path TEXT COLLATE "C" NOT NULL,
@@ -199,23 +181,21 @@ CREATE TABLE vault_kv_store (
 
 CREATE INDEX parent_path_idx ON vault_kv_store (parent_path);
 ```
-- Grant Policies.
+- Grant permissions to vault user.
 ```sql
-GRANT ALL PRIVILEGES ON DATABASE vault_server TO vault;
+GRANT ALL PRIVILEGES ON DATABASE vault_central TO vault;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO vault;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO  vault;
 ```
-
-- Create Vault Central Standalone.
+- Create Vault Standalone (Vault Central).
 ```bash
-kubectl create namespace vault-central --context $KUBE_CONTEXT
-helm upgrade --install vault-central hashicorp/vault --namespace vault-central -f helm-values/vault-central.yaml --kube-context $KUBE_CONTEXT
-kubectl apply -f helm-values/vault-central-ingress.yaml --context $KUBE_CONTEXT
-
+kubectl create namespace vault-central
+helm upgrade --install vault-central hashicorp/vault --namespace vault-central -f helm-values/vault-central.yaml
+kubectl apply -f helm-values/vault-central-ingress.yaml
 ```
 - Enable Secret Transit on Vault Central.
 ```bash
-kubectl port-forward vault-central-0 -n vault-central --context $KUBE_CONTEXT 8200:8200
+kubectl port-forward vault-central-0 -n vault-central 8200:8200
 
 export VAULT_ADDR="https://127.0.0.1:8200"
 
@@ -238,8 +218,9 @@ token_policies       ["autounseal" "default"]
 identity_policies    []
 policies             ["autounseal" "default"]
 ```
-- Transit Auto-unseal token is renewed automatically by default
-- Set **VAULT_TOKEN** environment variables of HA Vault cluster with previous step generate token (vault.yaml).
+- Notes:
+  - The Transit Auto-unseal token is renewed automatically by default.
+  - Set the `VAULT_TOKEN` environment in the Vault cluster with the token generated in the previous step (`./helm-values/vault-cluster/vault.yaml`).
 ```hcl
       seal "transit" {
         address = "https://vault-central.vault-central.svc:8200"
@@ -250,20 +231,19 @@ policies             ["autounseal" "default"]
       }
 ```
 ## 6. Setup Resources
-**[=> This is the use case for you!](terraform/README.md)**
+**[=> Using terraform setup resource.](terraform/README.md)**
 ## 7. Examples
-**[=> This is the use case for you!](examples/README.md)**
-## 8. Uninstall Vault
-- Uninstall Helm Release & Addition Resouces from Kubernetes Cluster
+**[=> Vault Example](examples/README.md)**
+## 8. Uninstall Vault 
+- Uninstall Helm release and addition resouces from Kubernetes.
 ```bash
 helm uninstall vault --namespace $KUBE_NAMESPACE --kube-context $KUBE_CONTEXT
 helm uninstall vault-central --namespace vault-central --kube-context $KUBE_CONTEXT
-kubectl delete namespace project-demo --context $KUBE_CONTEXT
-kubectl delete namespace $KUBE_NAMESPACE --context $KUBE_CONTEXT
-kubectl delete namespace vault-central --context $KUBE_CONTEXT
+kubectl delete namespace project-demo
+kubectl delete namespace $KUBE_NAMESPACE
+kubectl delete namespace vault-central
 helm repo remove hashicorp
 ```
-
 - Drop Vault Database
 ```bash
 PGPASSWORD="$DB_PASSWORD" psql -h $DB_HOST -U postgres -c 'DROP DATABASE vault_server;'
