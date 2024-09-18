@@ -1,16 +1,22 @@
-- [Setup - Vault Project](#setup---vault-project)
-  - [1. Generate TLS](#1-generate-tls)
-  - [2. Vault Database](#2-vault-database)
-  - [3. Install Vault Server](#3-install-vault-server)
-        - [Create Vault Cluster](#create-vault-cluster)
+- [Setup - Vault Cluster](#setup---vault-cluster)
+  - [1. Generate Self-signed TLS Certificate](#1-generate-self-signed-tls-certificate)
+  - [2. Vault Storage](#2-vault-storage)
+  - [3. Install Vault Cluster](#3-install-vault-cluster)
   - [4. Unseal Vault](#4-unseal-vault)
-  - [5. Example](#5-example)
-        - [5.1 Vault Kubernetes Auth](#51-vault-kubernetes-auth)
-        - [5.2 Vault JWT/OIDC Auth](#52-vault-jwtoidc-auth)
-  - [6. Auto Unseal with Vault Central](#6-auto-unseal-with-vault-central)
-    - [6.1. Generate TLS Vault Central](#61-generate-tls-vault-central)
-    - [6.2. Vault Database](#62-vault-database)
-  - [7. Uninstall Vault](#7-uninstall-vault)
+  - [5. Auto Unseal with Vault Central](#5-auto-unseal-with-vault-central)
+    - [5.1. Generate Self-signed TLS Certificate for Vault Central](#51-generate-self-signed-tls-certificate-for-vault-central)
+    - [5.2. Vault Database](#52-vault-database)
+    - [5.3. Setup Vault Standalone](#53-setup-vault-standalone)
+  - [6. Setup Resources](#6-setup-resources)
+    - [6.1. Users Management](#61-users-management)
+    - [6.2. Secrets Management](#62-secrets-management)
+  - [6.3. Dynamic Database Credentials](#63-dynamic-database-credentials)
+  - [7. Examples](#7-examples)
+    - [7.1. Get secrets from pods using Kubenretes Auth](#71-get-secrets-from-pods-using-kubenretes-auth)
+    - [7.2. Get secrets from pods using JWT/OIDC Auth](#72-get-secrets-from-pods-using-jwtoidc-auth)
+    - [7.3. Auto Authentication using vault agent](#73-auto-authentication-using-vault-agent)
+    - [7.4. Dynamic Database Credentials](#74-dynamic-database-credentials)
+  - [8. Uninstall Vault](#8-uninstall-vault)
 
 # Setup - Vault Cluster
 ## 1. Generate Self-signed TLS Certificate
@@ -96,7 +102,7 @@ kubectl -n $KUBE_NAMESPACE create secret tls tls-server \
 ```
 - Create Kubernetes secret for Vault database.
 ```bash
-kubectl create secret generic vault-db --from-file=config/config.hcl --namespace=$KUBE_NAMESPACE
+kubectl create secret generic vault-db --from-file=helm-values/vault-cluster/config/storage.hcl --namespace=$KUBE_NAMESPACE
 ```
 - Add helm repository.
 ```bash
@@ -106,9 +112,9 @@ helm repo add hashicorp https://helm.releases.hashicorp.com
 ```bash
 helm upgrade --install vault hashicorp/vault --namespace $KUBE_NAMESPACE -f helm-values/values.yaml
 ```
-- Create ingress
+- Create ingress.
 ```bash
-kubectl apply -f helm-values/ingress.yaml
+kubectl apply -f helm-values/vault-cluster/ingress.yaml
 ```
 - Notes:
   - Replace `$KUBE_NAMESPACE` with your Vault kubernetes namespace.
@@ -135,13 +141,13 @@ kubectl exec --namespace $KUBE_NAMESPACE --stdin=true --tty=true vault-2 -- vaul
 ```
 ## 5. Auto Unseal with Vault Central
 ### 5.1. Generate Self-signed TLS Certificate for Vault Central
-- Create “ca.pem” and “ca-key.pem”
+- Create “ca.pem” and “ca-key.pem”.
 
 ```bash
 cfssl gencert -initca ./tls/ca-csr.json | cfssljson -bare /tmp/ca
 ```
 
-- Create self-signed certificate
+- Create self-signed certificate.
 ```bash
 cfssl gencert \
   -ca=/tmp/ca.pem \
@@ -187,11 +193,12 @@ GRANT ALL PRIVILEGES ON DATABASE vault_central TO vault;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO vault;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO  vault;
 ```
+### 5.3. Setup Vault Standalone
 - Create Vault Standalone (Vault Central).
 ```bash
 kubectl create namespace vault-central
-helm upgrade --install vault-central hashicorp/vault --namespace vault-central -f helm-values/vault-central.yaml
-kubectl apply -f helm-values/vault-central-ingress.yaml
+helm upgrade --install vault-central hashicorp/vault --namespace vault-central -f helm-values/vault-central/vault-central.yaml
+kubectl apply -f helm-values/vault-central/vault-central-ingress.yaml
 ```
 - Enable Secret Transit on Vault Central.
 ```bash
@@ -205,7 +212,7 @@ vault login
 # create transit secret 
 vault secrets enable transit
 vault write -f transit/keys/autounseal
-vault policy write autounseal config/autounseal-policy.hcl
+vault policy write autounseal helm-values/vault-central/autounseal-policy.hcl
 vault token create -orphan -policy=autounseal -period=24h
 
 Key                  Value
@@ -231,9 +238,32 @@ policies             ["autounseal" "default"]
       }
 ```
 ## 6. Setup Resources
-**[=> Using terraform setup resource.](terraform/README.md)**
+### 6.1. Users Management
+- If you need to manage users and policies to control access to secret values, or if you have a use case that involves sharing secrets between teams and managing personal user secrets.
+</br>
+
+**[=> This is the use case for you!](terraform/projects/users-management/README.md)**
+
+### 6.2. Secrets Management
+- Manage your application's flow in Kubernetes by connecting to Vault to retrieve secrets.
+</br>
+
+**[=> This is the use case for you!](terraform/projects/secrets-management/README.md)**
+## 6.3. Dynamic Database Credentials
+- When you need to create dynamic credentials for accessing your database.
+</br>
+
+**[=> This is the use case for you!](terraform/projects/secrets-management/README.md)**
+
 ## 7. Examples
-**[=> Vault Example](examples/README.md)**
+### 7.1. Get secrets from pods using Kubenretes Auth
+**[=> Kubernetes Auth Example](kubernetes-auth/README.md)**
+### 7.2. Get secrets from pods using JWT/OIDC Auth
+**[=> Kubernetes Auth Example](jwt-oidc-auth/README.md)**
+### 7.3. Auto Authentication using vault agent
+**[=> Auto Authenticate Example](auto-auth/README.md)**
+### 7.4. Dynamic Database Credentials
+**[=> Dynamic Database Credentials Example](dynamic-database-credentials/README.md)**
 ## 8. Uninstall Vault 
 - Uninstall Helm release and addition resouces from Kubernetes.
 ```bash
