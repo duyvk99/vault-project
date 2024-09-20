@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: example-vault-agent-config
+  name: service-a-vault-agent-config
   namespace: project-demo
 data:
   vault-agent-config.hcl: |
@@ -12,11 +12,10 @@ data:
     pid_file = "/home/vault/pidfile"
 
     auto_auth {
-        method "jwt" {
-            mount_path = "auth/jwt-uat"
+        method "kubernetes" {
+            mount_path = "auth/kubernetes-demo"
             config = {
-              path = "/var/run/secrets/tokens/vault"
-              role = "demo-project-uat-service-a"
+              role = "demo-dev-service-a"
             }
         }
 
@@ -25,6 +24,15 @@ data:
                 path = "/vault/token"
             }
         }
+    }
+
+    template {
+      destination = "/etc/secrets/secret.json"
+      contents = <<EOT
+      {{- with secret "secret-demo/data/demo/dev/secret_service_a" }}
+      {{ .Data.data  | toJSONPretty }}
+      {{ end }}
+      EOT
     }
 
 ---
@@ -54,30 +62,24 @@ spec:
       volumeMounts:
         - mountPath: /etc/vault
           name: config
-        - mountPath: /vault
+        - mountPath: /etc/secrets
           name: shared-data
-        - mountPath: /var/run/secrets/tokens
-          name: vault-token
-
   containers:
     - name: nginx
       image: nginx:stable-alpine
       volumeMounts:
-        - mountPath: /vault
+        - mountPath: /secrets
           name: shared-data
+      resources:
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
   volumes:
-    - name: vault-token
-      projected:
-        sources:
-          - serviceAccountToken:
-              path: vault
-              audience: vault
-              expirationSeconds: 600
     - configMap:
         items:
           - key: vault-agent-config.hcl
             path: vault-agent-config.hcl
-        name: example-vault-agent-config
+        name: service-a-vault-agent-config
       name: config
     - emptyDir: {}
       name: shared-data

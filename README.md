@@ -14,7 +14,7 @@
   - [7. Examples](#7-examples)
     - [7.1. Get secrets from pods using Kubenretes Auth](#71-get-secrets-from-pods-using-kubenretes-auth)
     - [7.2. Get secrets from pods using JWT/OIDC Auth](#72-get-secrets-from-pods-using-jwtoidc-auth)
-    - [7.3. Auto Authentication using vault agent](#73-auto-authentication-using-vault-agent)
+    - [7.3. Vault Policies User Management](#73-vault-policies-user-management)
     - [7.4. Dynamic Database Credentials](#74-dynamic-database-credentials)
   - [8. Uninstall Vault](#8-uninstall-vault)
 
@@ -257,13 +257,13 @@ policies             ["autounseal" "default"]
 
 ## 7. Examples
 ### 7.1. Get secrets from pods using Kubenretes Auth
-**[=> Kubernetes Auth Example](kubernetes-auth/README.md)**
+**[=> Kubernetes Auth Example](examples/kubernetes-auth/README.md)**
 ### 7.2. Get secrets from pods using JWT/OIDC Auth
-**[=> Kubernetes Auth Example](jwt-oidc-auth/README.md)**
-### 7.3. Auto Authentication using vault agent
-**[=> Auto Authenticate Example](auto-auth/README.md)**
+**[=> JWT/OIDC Auth Example](examples/jwt-auth/README.md)**
+### 7.3. Vault Policies User Management
+**[=> Users Management Example](examples/users-management/README.md)**
 ### 7.4. Dynamic Database Credentials
-**[=> Dynamic Database Credentials Example](dynamic-database-credentials/README.md)**
+**[=> Dynamic Database Credentials Example](examples/dynamic-database-credentials/README.md)**
 ## 8. Uninstall Vault 
 - Uninstall Helm release and addition resouces from Kubernetes.
 ```bash

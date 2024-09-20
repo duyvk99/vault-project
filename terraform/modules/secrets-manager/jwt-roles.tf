@@ -1,6 +1,6 @@
 # # Enable JWT Auth Method
 resource "vault_jwt_auth_backend" "jwt" {
-  count              = length(var.auth_jwt_exists) > 0 ? 0 : 1
+  count              = length(var.auth_jwt_exists) > 0 || var.enable_jwt_auth == false ? 0 : 1
   description        = "JWT Auth Backend"
   path               = var.auth_jwt_path
   oidc_discovery_url = var.oidc_discovery_url

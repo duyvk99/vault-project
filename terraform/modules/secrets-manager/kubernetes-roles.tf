@@ -1,13 +1,13 @@
 # Enable Kubernetes Auth Method
 resource "vault_auth_backend" "kubernetes" {
-  count = length(var.auth_kubernetes_exists) > 0 ? 0 : 1
+  count = length(var.auth_kubernetes_exists) > 0 || var.enable_kubernetes_auth == false ? 0 : 1
   type  = "kubernetes"
   path  = var.auth_kubernetes_path
 }
 
 # Update Kubernetes Auth Config
 resource "vault_kubernetes_auth_backend_config" "kubernetes" {
-  count = length(var.auth_kubernetes_exists) > 0 ? 0 : 1
+  count = length(var.auth_kubernetes_exists) > 0  || var.enable_kubernetes_auth == false ? 0 : 1
   backend         = vault_auth_backend.kubernetes[0].path
   kubernetes_host = var.kubernetes_host #### API Endpoint
 }

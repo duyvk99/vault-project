@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: service-a
+  namespace: project-demo
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: service-a
+  namespace: project-demo
+spec:
+  serviceAccountName: service-a
+  containers:
+    - name: nginx
+      image: alpine/curl
+      resources:
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+      command: ["sh","-c","apk add grep;sleep 100000000"]
