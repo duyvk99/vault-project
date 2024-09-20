@@ -14,10 +14,15 @@ spec:
   serviceAccountName: service-a
   containers:
     - name: nginx
-      image: nginx:stable-alpine
+      image: alpine/curl
       volumeMounts:
         - mountPath: /var/run/secrets/tokens
           name: vault-token
+      resources:
+        limits:
+          memory: "128Mi"
+          cpu: "500m"
+      command: ["sh","-c","apk add grep;sleep 100000000"]
   volumes:
     - name: vault-token
       projected:

@@ -1,0 +1,12 @@
+address                = "https://vault.dtsdemo.com"
+token                  = ""
+project                = "demo"
+environment            = "dev"
+# Secret Engine
+secret_path            = "secret-demo"
+# Kubernetes Auth
+enable_kubernetes_auth = true
+auth_kubernetes_path   = "kubernetes-demo"
+kubernetes_host        = ""
+# JWT AUTH
+enable_jwt_auth        = false

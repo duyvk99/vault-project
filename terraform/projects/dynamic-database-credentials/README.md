@@ -15,7 +15,7 @@ terraform {
 
 ``` 
 ## Setup
-- Replace your terraform variables and run the command below to create resources in Vault. 
+- Update your Terraform variables and execute the command below to create resources in Vault.
 ```
 cd terraform/project/dynamic-database-credentials
 mv terraform.tfvars.example terraform.tfvars
@@ -30,10 +30,10 @@ terraform apply
 |     Name    | Description                                         |  Type  | Default | Required |
 |:-----------:|-----------------------------------------------------|:------:|---------|:--------:|
 |   address   | Vault FQDN                                          | string |         |    yes   |
-|    token    | Vault tokens have permission to create resources    | string |         |    yes   |
+|    token    | Vault tokens are authorized to create resources.    | string |         |    yes   |
 | db_host     | Postgres Database Host                              | string |         | yes      |
 | db_username | Database username                                   | string |         | yes      |
 | db_name     | Database name                                       | string |         | yes      |
 | db_password | Database Password                                   | string |         | yes      |
 | max_ttl     | Lease expired time                                  | number | 600     |          |
-| group_name  | The group name for attach the database admin policy | string |         | yes      |
+| group_name  | The group name to attach the database admin policy | string |         | yes      |
