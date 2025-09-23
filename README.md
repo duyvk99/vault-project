@@ -58,6 +58,7 @@ ALTER DATABASE vault_server OWNER TO vault;
   - Replace `vault_server` with the PostgreSQL database name for Vault.
 </br>
 - Setup Vault database table and enable high avaiability.
+
 ```sql
 \c vault_server;
 
